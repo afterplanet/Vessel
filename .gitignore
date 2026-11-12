@@ -1,0 +1,8 @@
+.build/
+*.app/
+.*.building.app/
+.DS_Store
+dist/
+vendor/
+reference/
+satdump_crash_*.txt
