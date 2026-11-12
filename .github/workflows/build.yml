@@ -1,0 +1,86 @@
+name: Build
+
+# Builds Vessel on the oldest macOS it supports, so the app runs there and on everything newer,
+# then checks that same app starts and works on each newer macOS.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Choose Xcode
+        run: |
+          XCODE="$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+          echo "Using $XCODE"
+          echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
+
+      - name: Restore the engine's radio libraries
+        uses: actions/cache@v4
+        with:
+          path: .build/satdump/src/deps
+          key: satdump-deps-${{ runner.os }}-macos14-${{ hashFiles('tools/build_satdump.sh') }}
+
+      - name: Restore the GPS engine
+        uses: actions/cache@v4
+        with:
+          path: vendor/gnss-sdr
+          key: gnss-sdr-${{ runner.os }}-macos14-${{ hashFiles('tools/build_gnss_sdr.sh', 'tools/bundle_dylibs.py') }}
+
+      - name: Build the receiving engine (SatDump)
+        run: tools/build_satdump.sh all
+
+      - name: Build the GPS engine (GNSS-SDR)
+        run: |
+          if [ -x vendor/gnss-sdr/bin/gnss-sdr ]; then echo "Restored from cache"; else tools/build_gnss_sdr.sh all; fi
+
+      - name: Run the tests
+        run: swift test
+
+      - name: Build the app
+        run: ./build_app.sh
+
+      - name: Check the app
+        run: tools/smoke_test.sh Vessel.app
+
+      - name: Package
+        run: |
+          VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Vessel.app/Contents/Info.plist)"
+          ditto -c -k --sequesterRsrc --keepParent Vessel.app "Vessel-$VERSION-macOS-arm64.zip"
+          ls -la *.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Vessel-macOS-arm64
+          path: Vessel-*-macOS-arm64.zip
+          retention-days: 30
+
+  check:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: tools
+      - uses: actions/download-artifact@v4
+        with:
+          name: Vessel-macOS-arm64
+      - name: Unpack
+        run: ditto -x -k Vessel-*-macOS-arm64.zip .
+      - name: Check the app on ${{ matrix.os }}
+        run: tools/smoke_test.sh Vessel.app
