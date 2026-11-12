@@ -138,3 +138,54 @@ final class LockedPathTests: XCTestCase {
         XCTAssertEqual(RadarScope.travelled(p, at: aos.addingTimeInterval(900)), 1)
     }
 }
+
+final class StartupChecklistTests: XCTestCase {
+    private var ready: StartupStatus {
+        StartupStatus(catalogueLoaded: true, catalogueCount: 17000, frequenciesLoaded: true, withFrequencies: 1200,
+                      decodersChecked: true, decoderCount: 300, engineFound: true, engineProbed: true, gpsEngineFound: true,
+                      hardware: ["RTL-SDR"], hardwareChecked: true, hostsLoaded: true, hostCount: 80, elapsed: 5)
+    }
+
+    func testEverythingReadyClosesByItself() {
+        XCTAssertTrue(ready.allFinished)
+        XCTAssertFalse(ready.hasProblem)
+    }
+
+    func testStillLoadingWaits() {
+        var s = ready; s.frequenciesLoaded = false
+        XCTAssertFalse(s.allFinished)
+    }
+
+    func testMissingEngineIsAProblemThatKeepsTheScreenOpen() {
+        var s = ready; s.engineFound = false; s.engineProbed = false; s.decodersChecked = false
+        XCTAssertTrue(s.allFinished)
+        XCTAssertTrue(s.hasProblem)
+        XCTAssertTrue(s.steps.first { $0.id == "decoders" }!.isProblem)
+    }
+
+    func testNoHardwareIsFine() {
+        var s = ready; s.hardware = []
+        XCTAssertFalse(s.hasProblem)
+        guard case .done(let text) = s.steps.first(where: { $0.id == "hardware" })!.state else { return XCTFail() }
+        XCTAssertTrue(text.contains("online receivers"))
+    }
+
+    func testSlowStepsStopHoldingTheAppAfterTheLimit() {
+        var s = ready; s.hostsLoaded = false; s.elapsed = StartupStatus.waitLimit + 1
+        XCTAssertTrue(s.allFinished)
+        XCTAssertFalse(s.hasProblem)
+    }
+
+    func testOfflineCatalogueSaysWhy() {
+        var s = ready; s.catalogueLoaded = false; s.frequenciesLoaded = false; s.catalogueError = "The Internet connection appears to be offline."
+        XCTAssertTrue(s.steps.first { $0.id == "catalogue" }!.isProblem)
+        XCTAssertTrue(s.steps.first { $0.id == "frequencies" }!.isProblem)
+    }
+}
+
+final class ProbeFinishTests: XCTestCase {
+    func testListIsCompleteOnceTheEngineSaysGoodbye() {
+        XCTAssertFalse(SatDumpRunner.probeFinished("(I) Found devices (sources) :\n(I) - RTL-TCP\n"))
+        XCTAssertTrue(SatDumpRunner.probeFinished("(I) Found devices (sinks) :\n(I) Done! Goodbye\n"))
+    }
+}

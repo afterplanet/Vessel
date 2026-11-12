@@ -80,6 +80,11 @@ Satellites with no public frequency get a **Scan** button in the Satellite panel
 | Recent receptions, photos | SatNOGS Network and DB | 10 minutes, per locked satellite |
 | Your location | macOS Wi-Fi positioning, then ipwho.is or ipapi.co, or GPS and GNSS-SDR with no Wi-Fi | Only when you click the crosshair |
 | Telemetry formats | satnogs-decoders on GitLab | Checked daily, downloaded when changed |
+| Operators, builders, mass, bus | GCAT (planet4589.org) | 7 days |
+| Amateur frequencies | AMSAT satellite index, JE9PEL | 1 day, 7 days |
+| Amateur operating reports | AMSAT live status | Per locked satellite |
+| Deep-space positions | NASA JPL Horizons | Per spacecraft, as needed |
+| Decoder definitions | SatDump on GitHub | Checked at every start |
 
 Caches live in `~/Library/Application Support/Vessel`.
 

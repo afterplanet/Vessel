@@ -82,6 +82,10 @@ final class SatDumpRunner: ObservableObject {
     @Published private(set) var startedAt: Date?
     @Published private(set) var detectedDevices: [DetectedDevice] = []
     @Published private(set) var probing = false
+    /// The first look for radios has finished, whatever it found. The startup checklist waits on it.
+    @Published private(set) var probedOnce = false
+    /// The decoders have been checked against upstream at least once this launch.
+    @Published private(set) var pipelinesChecked = false
     @Published private(set) var catalog = PipelineCatalog(resourcesDir: nil)
 
     let spectrum = SpectrumFeed()
@@ -119,6 +123,7 @@ final class SatDumpRunner: ObservableObject {
 
     /// Runs at every launch, in the background.
     func checkForPipelineUpdates() async {
+        defer { pipelinesChecked = true }
         guard let exe = executable else { return }
         pipelineStatus = "Checking for decoder updates…"
         let outcome = await PipelineUpdater.checkForUpdates(engine: exe, installed: resourcesDir?.appendingPathComponent("pipelines"))
@@ -171,7 +176,23 @@ final class SatDumpRunner: ObservableObject {
             p.standardError = out
             var devices: [DetectedDevice] = []
             if (try? p.run()) != nil {
-                let data = out.fileHandleForReading.readDataToEndOfFile()
+                // The engine can hang in its crash handler as it exits, so it's stopped as soon as its list
+                // is complete, and after 30 s whatever happens.
+                let pid = p.processIdentifier
+                let guardTimer = DispatchWorkItem { if p.isRunning { kill(pid, SIGKILL) } }
+                DispatchQueue.global().asyncAfter(deadline: .now() + 30, execute: guardTimer)
+                defer { guardTimer.cancel() }
+                var data = Data()
+                let reader = out.fileHandleForReading
+                while true {
+                    let chunk = reader.availableData
+                    if chunk.isEmpty { break }
+                    data.append(chunk)
+                    if Self.probeFinished(String(decoding: data, as: UTF8.self)) {
+                        if p.isRunning { kill(pid, SIGKILL) }
+                        break
+                    }
+                }
                 p.waitUntilExit()
                 devices = DetectedDevice.parse(Self.stripANSI(String(decoding: data, as: UTF8.self)))
             }
@@ -179,8 +200,14 @@ final class SatDumpRunner: ObservableObject {
             await MainActor.run { [weak self] in
                 self?.detectedDevices = found
                 self?.probing = false
+                self?.probedOnce = true
             }
         }
+    }
+
+    /// The engine prints its sinks after its sources, then says goodbye: by then the list is all there.
+    nonisolated static func probeFinished(_ output: String) -> Bool {
+        output.contains("Done! Goodbye") || output.contains("Exiting SatDump")
     }
 
     nonisolated static func stripANSI(_ s: String) -> String {

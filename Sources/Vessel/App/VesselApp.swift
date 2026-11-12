@@ -192,6 +192,8 @@ struct RootView: View {
     @State private var globeSize = GlobeSizeBox()
     @State private var lastSidebarToggle: CFTimeInterval = 0
     @State private var sidebar = NavigationSplitViewVisibility.all
+    /// Scripted checks open straight into the app, unless they ask to see the checklist.
+    @State private var showStartup = Snapshot.arguments.isEmpty || Snapshot.arguments.contains("--startup")
 
     var body: some View {
         NavigationSplitView(columnVisibility: $sidebar) {
@@ -258,6 +260,9 @@ struct RootView: View {
                 if let object = app.spaceObject { SpaceSceneOverlay(object: object).id(object.id) }
             }
                 .onGeometryChange(for: CGSize.self) { $0.size } action: { globeSize.size = $0 }
+        }
+        .overlay {
+            if showStartup { StartupChecklist(isPresented: $showStartup).transition(.opacity) }
         }
         .searchable(text: $query, placement: .toolbar, prompt: "Find satellite or NORAD ID")
         .onSubmit(of: .search) {

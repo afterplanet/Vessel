@@ -150,6 +150,8 @@ final class AppState: ObservableObject {
     @Published var hosts: [SpyHost] = []
     @Published var selectedHostID: String?
     @Published var hostsStatus = ""
+    /// The receiver-station directories have answered, or failed to, at least once this launch.
+    @Published private(set) var hostsLoaded = false
     /// nil while unknown or checking.
     @Published var hostReachable: Bool?
     @Published private(set) var hostHealth: [String: HostHealth] = [:]
@@ -955,6 +957,7 @@ final class AppState: ObservableObject {
     }
 
     func refreshHosts() async {
+        defer { hostsLoaded = true }
         if hosts.isEmpty { hostsStatus = "Loading hosts…" }
         // Each directory stands alone: one being down must not empty the other's list.
         async let spy = try? SpyDirectory.fetch()

@@ -9,6 +9,11 @@ let package = Package(
         .target(name: "CSGP4", path: "Sources/CSGP4",
                 publicHeadersPath: "include",
                 cxxSettings: [.unsafeFlags(["-O2", "-w"])]),
+        // David Rowe's Codec2 speech codec, for voice sent as data (HADES-SA).
+        .target(name: "CCodec2", path: "Sources/CCodec2",
+                exclude: ["LICENSE.codec2"],
+                publicHeadersPath: "include",
+                cSettings: [.headerSearchPath("."), .unsafeFlags(["-O2", "-w"])]),
         // fsphil's SSDV library: pictures sent as data packets.
         .target(name: "CSSDV", path: "Sources/CSSDV",
                 exclude: ["LICENSE.ssdv"],
@@ -25,7 +30,7 @@ let package = Package(
                 cxxSettings: [.headerSearchPath("."), .unsafeFlags(["-O2", "-w"])]),
         .executableTarget(
             name: "Vessel",
-            dependencies: ["CSGP4", "CFT8", "CDraco", .product(name: "Yams", package: "Yams"), "CSSDV"],
+            dependencies: ["CSGP4", "CFT8", "CDraco", .product(name: "Yams", package: "Yams"), "CSSDV", "CCodec2"],
             path: "Sources/Vessel",
             exclude: [],
             resources: [.copy("Resources")],

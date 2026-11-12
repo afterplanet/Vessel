@@ -79,6 +79,15 @@ SatDump is built into Vessel as its receiving and decoding engine, so there's no
 - **Lock history** beside the search bar, listing every satellite you've locked with the date and time.
 - **Your location** from an address, a click on the globe, Wi-Fi positioning, or a GPS fix taken by scanning GPS satellites with your own SDR.
 
+### A wide range of satellites
+
+![The James Webb Space Telescope's position in the solar system](docs/images/deep-space.jpg)
+
+- **Everything in orbit that's publicly tracked:** more than 17,000 active satellites, refreshed from CelesTrak, from low Earth orbit out to geostationary and highly elliptical orbits, including the ISS and the Chinese space station, Starlink, OneWeb, weather, navigation, science and amateur satellites.
+- **Newly launched satellites** that SatNOGS already hears, before they have an official catalogue number.
+- **Deep-space missions and telescopes** tracked with NASA JPL Horizons, such as the James Webb Space Telescope, Hubble, Voyager 1 and 2, New Horizons, Juno, Europa Clipper, JUICE and Psyche, each shown in its own view of where it is in the solar system.
+- **Categories** for every satellite (communications, weather, navigation, Earth observation, science, amateur, space stations and more), with a filter for each.
+
 ### Receiver
 
 ![Receiver panel](docs/images/receiver-panel.png)
@@ -89,6 +98,36 @@ SatDump is built into Vessel as its receiving and decoding engine, so there's no
 - **Spectrum and waterfall** with labelled signals and a signal meter.
 - **Live decoding or save to file.** Decode as the signal arrives and get weather images, SSTV pictures, packet messages and telemetry, or save the raw signal to process later. *Auto listen* starts when the satellite rises and stops when it sets.
 - **Scan** for satellites with no published frequency, checking candidate signals against the Doppler shift the orbit predicts.
+
+### Online receiver network
+
+No radio of your own? Vessel can listen through hundreds of public SpyServer stations around the world, with WebSDR stations opening in your browser.
+
+![Receiver stations near a region picked on the globe](docs/images/online-receivers.jpg)
+
+- **The full directory** is loaded live, with each station's location, frequency range, antenna and how many people are using it.
+- **Choose by place:** search by country, or click a region on the globe to list the stations there.
+- **Choose by satellite:** list only the stations that can hear the locked satellite, with when it will next pass over each of them.
+- **Live status:** each station is checked as you browse and marked as available, busy or offline. The one you pick shows its connection strength.
+- Tuning, sample rate and gain follow the satellite automatically, just as with a radio of your own.
+
+### Live satellite information
+
+Vessel combines several public databases and APIs, so each satellite comes with as much information as is published:
+
+<img src="docs/images/satellite-details.png" alt="Satellite details for NOAA 19" width="360">
+
+| What | Where it comes from |
+|---|---|
+| Orbits and the satellite catalogue | CelesTrak |
+| Owner country | CelesTrak SATCAT |
+| Operator, builder, mass and bus | GCAT by Jonathan McDowell |
+| Downlink and uplink frequencies, recent receptions, pictures, telemetry | SatNOGS DB and Network |
+| Amateur frequencies and live operating reports | AMSAT and the JE9PEL satellite index |
+| Deep-space positions | NASA JPL Horizons |
+| Decoder updates | SatDump's published decoder definitions |
+
+Everything is cached on your Mac and refreshed politely, at the intervals each service asks for. Satellites with missing details link to Orbital Radar for a look-up in your browser.
 
 ### Transmitter
 
