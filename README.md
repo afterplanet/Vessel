@@ -220,8 +220,10 @@ Vessel stands on the work of many people and projects. Thank you to all of them.
 
 - SGP4: David Vallado's reference code, via python-sgp4 (MIT).
 - [GNSS-SDR](https://gnss-sdr.org) (GPL-3.0): GPS positions. It ships inside the app and runs as a separate program.
-- ft8_lib by Kārlis Goba (MIT): FT8 and FT4 encoding.
+- ft8_lib by Kārlis Goba (MIT): FT8 and FT4 encoding and decoding.
 - ssdv by Philip Heron (GPL-3.0): SSDV picture packets.
+- [Codec2](https://github.com/drowe67/codec2) by David Rowe and contributors (LGPL-2.1): voice messages from HADES-SA, trimmed to the 700C speech codec.
+- HADES-SA frame format: from [AMSAT EA](https://www.amsat-ea.org)'s HADES-SA decoder (CC BY 4.0), checked against its sample frames, and the HADES deframer in [gr-satellites](https://github.com/daniestevez/gr-satellites) by Daniel Estévez. No gr-satellites code is used.
 - Draco by Google (Apache-2.0): 3D mesh decoding, trimmed to decoding.
 - Yams (MIT): YAML parsing.
 - flag-icons (MIT): country flags.

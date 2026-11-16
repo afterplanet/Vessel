@@ -76,6 +76,7 @@ final class AppState: ObservableObject {
     @Published var orbitFilter: OrbitClass?
     @Published var satelliteFilter = SatelliteFilter()
     @Published var showScan = false
+    @Published var showBugReport = Snapshot.arguments.contains("--bug-report-open")
     /// Frequencies chosen from a scan, by NORAD number, for satellites with none listed.
     @Published private(set) var scanFound: [String: Double] = UserDefaults.standard.dictionary(forKey: "scanFound") as? [String: Double] ?? [:] {
         didSet { UserDefaults.standard.set(scanFound, forKey: "scanFound") }
@@ -95,6 +96,7 @@ final class AppState: ObservableObject {
     let sstv = SSTVMonitor()
     let packets = PacketMonitor()
     let ft = FTMonitor()
+    let hades = HadesMonitor()
     let formats = FormatMonitor()
 
     /// A spacecraft shown in its own view, as the globe can't reach it.
@@ -600,6 +602,16 @@ final class AppState: ObservableObject {
         let saving = runner.isRunning && runner.mode == .record && tunedTransponder != nil && ["cs16", "cs8"].contains(effectiveFormat)
         ft.follow(saving ? runner.outputDir : nil, centreHz: runner.spectrum.frequencyHz ?? 0, sampleRate: runner.spectrum.sampleRate,
                   usb: tunedTransponder?.mode.uppercased() != "LSB", satellite: locked, station: station)
+        syncHades()
+    }
+
+    /// HADES-SA sends 800 bps FSK in its own format. From the raw signal the app demodulates it
+    /// itself, following Doppler; from FM audio it reads what the engine demodulated.
+    func syncHades() {
+        guard locked?.norad == Hades.norad, runner.isRunning else { hades.follow(nil); return }
+        let raw = runner.mode == .record && ["cs16", "cs8"].contains(effectiveFormat)
+        hades.follow(runner.outputDir, raw: raw, centreHz: runner.spectrum.frequencyHz ?? 0, sampleRate: runner.spectrum.sampleRate,
+                     satellite: locked, station: station)
     }
 
     /// The linear transponder the receiver is tuned inside, if it is.

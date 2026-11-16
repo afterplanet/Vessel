@@ -13,7 +13,9 @@ let package = Package(
         .target(name: "CCodec2", path: "Sources/CCodec2",
                 exclude: ["LICENSE.codec2"],
                 publicHeadersPath: "include",
-                cSettings: [.headerSearchPath("."), .unsafeFlags(["-O2", "-w"])]),
+                // FT8 has its own copy of the same FFT, so this one is renamed.
+                cSettings: [.headerSearchPath("."), .define("kiss_fft", to: "c2_kiss_fft"), .define("kiss_fft_alloc", to: "c2_kiss_fft_alloc"), .define("kiss_fft_stride", to: "c2_kiss_fft_stride"), .define("kiss_fft_cleanup", to: "c2_kiss_fft_cleanup"), .define("kiss_fft_next_fast_size", to: "c2_kiss_fft_next_fast_size"), .define("kiss_fftr", to: "c2_kiss_fftr"), .define("kiss_fftr_alloc", to: "c2_kiss_fftr_alloc"), .define("kiss_fftri", to: "c2_kiss_fftri"),
+                            .unsafeFlags(["-O2", "-w"])]),
         // fsphil's SSDV library: pictures sent as data packets.
         .target(name: "CSSDV", path: "Sources/CSSDV",
                 exclude: ["LICENSE.ssdv"],

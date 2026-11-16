@@ -29,6 +29,7 @@ It **cannot** cover third-party components that are under their own licences. Ve
 | SatDump | GPL-3.0 | Built from source into the app as its receiving and decoding engine, run as a background program |
 | GNSS-SDR | GPL-3.0 | Ships inside the app as a separate program, for GPS positions |
 | ssdv (`Sources/CSSDV`) | GPL-3.0 | Compiled into the app, for SSDV pictures |
+| Codec2 (`Sources/CCodec2`) | LGPL-2.1 | Compiled into the app, for HADES-SA voice messages |
 | ft8_lib (`Sources/CFT8`) | MIT | Compiled into the app |
 | SGP4 (`Sources/CSGP4`) | MIT | Compiled into the app |
 | Draco (`Sources/CDraco`) | Apache-2.0 | Compiled into the app |

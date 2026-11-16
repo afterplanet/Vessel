@@ -335,6 +335,10 @@ struct RootView: View {
             store.setReceiverRanges(ranges)
             app.moveToReachableDownlink()
         }
+        .background(BugReportTitlebarButton { app.showBugReport = true }.frame(width: 0, height: 0))
+        .sheet(isPresented: $app.showBugReport) {
+            BugReportSheet().environmentObject(app)
+        }
         .sheet(isPresented: $app.showScan) {
             if let sat = app.locked {
                 ScanSheet(satellite: sat).environmentObject(app).environmentObject(runner)
@@ -1128,6 +1132,48 @@ struct RootView: View {
                 Snapshot.writePNG(r.cgImage, "\(v)-\(name).png")
             }
             FileHandle.standardError.write(Data("refused: \(UplinkPolicy.refused(for: s).map { "\($0.transmitter.description): \($0.reasons.map(\.reason))" })\n".utf8))
+        }
+        if a.contains("--click-bug-report") {
+            Task {
+                try? await Task.sleep(for: .seconds(8))
+                let say = { (s: String) in FileHandle.standardError.write(Data("bugclick: \(s)\n".utf8)) }
+                guard let win = NSApp.windows.first(where: { $0.isVisible && $0.toolbar != nil }),
+                      let acc = win.titlebarAccessoryViewControllers.first(where: { $0.identifier == BugReportTitlebarButton.Probe.identifier }) else {
+                    say("FAIL no button in the title bar"); return
+                }
+                let f = acc.view.convert(acc.view.bounds, to: nil)
+                let p = NSPoint(x: f.midX - 5, y: f.midY)
+                say("button at x \(Int(f.minX))...\(Int(f.maxX)) of a \(Int(win.frame.width)) wide window, y \(Int(f.minY)) of \(Int(win.frame.height))")
+                for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                    if let e = NSEvent.mouseEvent(with: type, location: p, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                  windowNumber: win.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1) {
+                        win.sendEvent(e)
+                    }
+                }
+                try? await Task.sleep(for: .seconds(1.5))
+                let sheet = win.attachedSheet != nil
+                say("\(app.showBugReport && sheet ? "PASS" : "FAIL") clicking it opens the form (sheet shown: \(sheet))")
+            }
+        }
+        if let path = value("--bug-report-png") {
+            for scheme in [ColorScheme.light, .dark] {
+                let r = ImageRenderer(content: BugReportSheet().environmentObject(app)
+                    .environment(\.colorScheme, scheme).background(scheme == .dark ? Color(white: 0.16) : Color(white: 0.96)))
+                r.scale = 2
+                Snapshot.writePNG(r.cgImage, "\(path)-\(scheme == .dark ? "dark" : "light").png")
+            }
+        }
+        if a.contains("--test-hades") {
+            if let s = store.satellite(norad: Hades.norad) {
+                app.lock(s)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    let txs = s.transmitters.map { "\($0.description) \(Int($0.downlinkHz)) \($0.mode)" }.joined(separator: "; ")
+                    let msg = "hades: \(s.name) locked=\(app.locked?.norad == Hades.norad) tuned=\(Int(app.frequency ?? 0)) pipeline=\(app.pipeline?.id ?? "none") panel=\(app.locked?.norad == Hades.norad) transmitters: \(txs)\n"
+                    FileHandle.standardError.write(Data(msg.utf8))
+                }
+            } else {
+                FileHandle.standardError.write(Data("hades: not in the catalogue\n".utf8))
+            }
         }
         if a.contains("--test-je9pel") {
             let withCall = store.satellites.filter { $0.callsign != nil }

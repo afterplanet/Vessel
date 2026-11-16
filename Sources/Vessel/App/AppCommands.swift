@@ -120,6 +120,8 @@ struct AppCommands: Commands {
 
         // MARK: Help
         CommandGroup(replacing: .help) {
+            Button("Report a Bug…") { app.showBugReport = true }
+            Divider()
             Link("AMSAT Satellite Status", destination: AMSATAPI.site)
             Link("SatNOGS Database", destination: URL(string: "https://db.satnogs.org")!)
             Link("CelesTrak Orbit Data", destination: URL(string: "https://celestrak.org")!)

@@ -110,8 +110,10 @@ enum ResultClassifier {
         if images.contains(ext) { return (.image, prettyImageName(stem)) }
         if name == "dataset.json" { return (.readable, "Processing summary") }
         if name == "telemetry.json" { return (.readable, "Telemetry") }
+        if name == "hades-frames.txt" { return (.readable, "HADES-SA frames") }
         if text.contains(ext) { return (.readable, ext == "json" ? "JSON data" : ext == "csv" ? "Table (CSV)" : ext == "log" ? "Log" : "Text") }
         if ext == "wav", stem.hasPrefix("baseband") { return (.baseband, "Raw signal (WAV)") }
+        if ext == "wav", stem.hasPrefix("voice_") { return (.audio, "Voice message") }
         if ext == "wav" { return (.audio, "Demodulated audio") }
         if audio.contains(ext) { return (.audio, "Audio") }
         if baseband.contains(ext) { return (.baseband, "Raw signal (\(ext))") }

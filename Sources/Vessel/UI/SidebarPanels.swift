@@ -1170,6 +1170,7 @@ struct CaptureSection: View {
                             callsign: UserDefaults.standard.string(forKey: "tx.callsign") ?? "") { lat, lon in
                     app.renderer?.fly(lat: Float(lat), lon: Float(lon))
                 }
+                HadesPanel(monitor: app.hades, relevant: app.locked?.norad == Hades.norad, saving: app.listenOutput == .file)
                 FTPanel(monitor: app.ft, relevant: app.tunedTransponder != nil, saving: app.listenOutput == .file,
                         callsign: UserDefaults.standard.string(forKey: "tx.callsign") ?? "")
                 InfoRow("Pipeline") {
