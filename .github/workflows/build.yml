@@ -1,7 +1,7 @@
 name: Build
 
-# Builds Vessel on the oldest macOS it supports, so the app runs there and on everything newer,
-# then checks that same app starts and works on each newer macOS.
+# Builds Vessel on the oldest macOS GitHub still offers (macOS 15; its macOS 14 machines are retired),
+# for macOS 14 and later, then checks that same app starts and works on each newer macOS.
 on:
   push:
     branches: [main]
@@ -14,14 +14,14 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
 
       - name: Choose Xcode
         run: |
-          XCODE="$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+          XCODE="$(ls -d /Applications/Xcode_*.app | grep -v -i "beta\|release_candidate" | sort -V | tail -1)"
           echo "Using $XCODE"
           echo "DEVELOPER_DIR=$XCODE/Contents/Developer" >> "$GITHUB_ENV"
 
@@ -29,13 +29,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .build/satdump/src/deps
-          key: satdump-deps-${{ runner.os }}-macos14-${{ hashFiles('tools/build_satdump.sh') }}
+          key: satdump-deps-${{ runner.os }}-macos15-${{ hashFiles('tools/build_satdump.sh') }}
 
       - name: Restore the GPS engine
         uses: actions/cache@v4
         with:
           path: vendor/gnss-sdr
-          key: gnss-sdr-${{ runner.os }}-macos14-${{ hashFiles('tools/build_gnss_sdr.sh', 'tools/bundle_dylibs.py') }}
+          key: gnss-sdr-${{ runner.os }}-macos15-${{ hashFiles('tools/build_gnss_sdr.sh', 'tools/bundle_dylibs.py') }}
 
       - name: Build the receiving engine (SatDump)
         run: tools/build_satdump.sh all
@@ -70,7 +70,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, macos-15, macos-latest]
+        os: [macos-15, macos-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
