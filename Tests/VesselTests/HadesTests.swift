@@ -21,7 +21,10 @@ private enum Sample {
     /// The telemetry frame as it went out: payload scrambled, CRC as the satellite computed it.
     static var powerOnAir: [UInt8] {
         let n = power.count
-        return [power[0]] + Hades.scramble(Array(power[1..<(n - 2)])) + power[(n - 2)...]
+        let head: [UInt8] = [power[0]]
+        let body: [UInt8] = Hades.scramble(Array(power[1..<(n - 2)]))
+        let crc: [UInt8] = Array(power[(n - 2)...])
+        return head + body + crc
     }
 }
 

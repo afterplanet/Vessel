@@ -1024,8 +1024,9 @@ final class PlacesTests: XCTestCase {
 
     func testWavSamples() {
         let bytes = Data([0x00, 0x40, 0x00, 0xC0, 0xFF, 0x7F, 0x00, 0x80])
-        XCTAssertEqual(WavFormat.samples(bytes, channels: 1), [0.5, -0.5, 32767.0 / 32768, -1])
-        XCTAssertEqual(WavFormat.samples(bytes, channels: 2), [0.5, 32767.0 / 32768], "the first channel only")
+        let nearlyOne: Float = 32767.0 / 32768
+        XCTAssertEqual(WavFormat.samples(bytes, channels: 1), [0.5, -0.5, nearlyOne, -1])
+        XCTAssertEqual(WavFormat.samples(bytes, channels: 2), [0.5, nearlyOne], "the first channel only")
         XCTAssertEqual(WavFormat.samples(bytes.prefix(3), channels: 1), [0.5], "half a sample waits for the rest")
         XCTAssertEqual(WavFormat.samples(Data(), channels: 1), [])
     }
@@ -1862,7 +1863,8 @@ final class PacketTests: XCTestCase {
 
     func testMicE() throws {
         // Latitude 33 25.64 N in the destination, whose last letters also say west and add 100 to the longitude.
-        let info: [UInt8] = [0x60, 12 + 28, 7 + 28, 74 + 28, 0x20, 0x20, 0x20, 0x3E, 0x2F] + Array("Tracker".utf8)
+        let head: [UInt8] = [0x60, 12 + 28, 7 + 28, 74 + 28, 0x20, 0x20, 0x20, 0x3E, 0x2F]
+        let info: [UInt8] = head + Array("Tracker".utf8)
         let f = AX25Frame(destination: "S32UVT", source: "W1AW", path: [], info: info)
         let r = try XCTUnwrap(APRSReport.parse(f))
         XCTAssertEqual(r.latitude ?? 0, 33 + 25.64 / 60, accuracy: 0.001)
