@@ -152,11 +152,11 @@ The other radios above are recognised and configured, but haven't been tested on
 
 ## Install
 
-1. Download **Vessel-1.0.0-macOS-arm64.zip** from the [latest release](https://github.com/afterplanet/Vessel/releases/latest).
+1. Download **Vessel-1.1.0-macOS-arm64.zip** from the [latest release](https://github.com/afterplanet/Vessel/releases/latest).
 2. Unzip it and move **Vessel.app** to your Applications folder.
 3. Open it. Vessel isn't notarised by Apple yet, so the first time macOS will refuse to open it. Go to **System Settings > Privacy & Security**, scroll down and click **Open Anyway**.
 
-The prebuilt app needs a Mac with Apple silicon and **macOS 27.2 or later**. On older versions of macOS, build Vessel from source instead.
+The prebuilt app needs a Mac with Apple silicon and **macOS 14 or later**.
 
 ## Build from source
 

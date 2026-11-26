@@ -195,71 +195,105 @@ struct RootView: View {
     /// Scripted checks open straight into the app, unless they ask to see the checklist.
     @State private var showStartup = Snapshot.arguments.isEmpty || Snapshot.arguments.contains("--startup")
 
+    // Split into parts: as one expression this was too much for the Swift compiler on macOS 15.
     var body: some View {
-        NavigationSplitView(columnVisibility: $sidebar) {
-            ScrollView {
-                VStack(spacing: 0) {
-                    StackPanel(title: "Satellite", symbol: "cube.transparent") { SatelliteSection() }
-                    StackPanel(title: "Passes", symbol: "calendar.badge.clock") { PassesSection() }
-                    StackPanel(title: "Groups", symbol: "folder.badge.person.crop") { GroupsSection(groups: groups, schedule: schedule) }
-                    if app.panelMode == .receive {
-                        StackPanel(title: "Listener", symbol: "antenna.radiowaves.left.and.right") { ListenerSection() }
-                        StackPanel(title: "Capture", symbol: "waveform") { CaptureSection() }
-                        StackPanel(title: "Schedule", symbol: "list.bullet.clipboard") { ScheduleSection(schedule: schedule) }
-                        StackPanel(title: "Output", symbol: "photo.on.rectangle") {
-                            OutputSection(health: runner.health, spectrum: runner.spectrum)
-                        }
-                    } else {
-                        StackPanel(title: "Transmit", symbol: "dot.radiowaves.up.forward") { TransmitSection() }
-                        StackPanel(title: "Contact planner", symbol: "person.2.wave.2") { ContactPlannerSection() }
-                        StackPanel(title: "Contact log", symbol: "list.bullet.rectangle") { ContactLogSection() }
-                    }
+        withSheets
+        .onChange(of: app.locked?.norad) { _, _ in
+            tx.satelliteChanged(app.locked)
+            planner.update(satellite: app.locked, station: app.station)
+        }
+        // Switching mode is pointless with the panels hidden.
+        .onChange(of: app.panelMode) { _, _ in if sidebar == .detailOnly { withAnimation { sidebar = .all } } }
+        .onAppear {
+            Snapshot.livePlanner = planner
+            signalLabels.attach(store: store, app: app)
+            schedule.attach(store: store, app: app)
+            Snapshot.liveSchedule = schedule
+        }
+        .onChange(of: app.showSpectrum) { _, _ in signalLabels.refresh() }
+        .onChange(of: groups.shownNorads) { _, only in app.satelliteFilter.onlyNorads = only }
+        .onChange(of: app.station) { _, s in
+            radar.setStation(s)
+            planner.update(satellite: app.locked, station: s)
+        }
+    }
+
+    /// The stacked panels in the sidebar.
+    private var sidebarPanels: some View {
+    ScrollView {
+        VStack(spacing: 0) {
+            StackPanel(title: "Satellite", symbol: "cube.transparent") { SatelliteSection() }
+            StackPanel(title: "Passes", symbol: "calendar.badge.clock") { PassesSection() }
+            StackPanel(title: "Groups", symbol: "folder.badge.person.crop") { GroupsSection(groups: groups, schedule: schedule) }
+            if app.panelMode == .receive {
+                StackPanel(title: "Listener", symbol: "antenna.radiowaves.left.and.right") { ListenerSection() }
+                StackPanel(title: "Capture", symbol: "waveform") { CaptureSection() }
+                StackPanel(title: "Schedule", symbol: "list.bullet.clipboard") { ScheduleSection(schedule: schedule) }
+                StackPanel(title: "Output", symbol: "photo.on.rectangle") {
+                    OutputSection(health: runner.health, spectrum: runner.spectrum)
                 }
+            } else {
+                StackPanel(title: "Transmit", symbol: "dot.radiowaves.up.forward") { TransmitSection() }
+                StackPanel(title: "Contact planner", symbol: "person.2.wave.2") { ContactPlannerSection() }
+                StackPanel(title: "Contact log", symbol: "list.bullet.rectangle") { ContactLogSection() }
             }
-            // The system's button can't have items placed before it, so this toolbar draws its own.
-            .toolbar(removing: .sidebarToggle)
-            .navigationSplitViewColumnWidth(min: 300, ideal: 320, max: 380)
-        } detail: {
-            // Inside the safe area, so the globe centres on what's visible rather than behind the sidebar.
-            ZStack {
-            GlobeView()
-                .overlay(alignment: .top) { LocationBar().padding(.top, 12) }
-                .overlay(alignment: .topLeading) { countBadge.padding(12) }
-                .overlay(alignment: .bottomLeading) {
+        }
+    }
+    // The system's button can't have items placed before it, so this toolbar draws its own.
+    .toolbar(removing: .sidebarToggle)
+    .navigationSplitViewColumnWidth(min: 300, ideal: 320, max: 380)
+    }
+
+    /// The globe and everything drawn over it.
+    private var globeDetail: some View {
+    // Inside the safe area, so the globe centres on what's visible rather than behind the sidebar.
+    ZStack {
+    GlobeView()
+        .overlay(alignment: .top) { LocationBar().padding(.top, 12) }
+        .overlay(alignment: .topLeading) { countBadge.padding(12) }
+        .overlay(alignment: .bottomLeading) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Imagery: Sentinel-2 cloudless 2016 by EOX, Copernicus Sentinel data; NASA Blue Marble")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .shadow(color: .black, radius: 2)
+                    .allowsHitTesting(false)
+                // Side by side if there's room beside the radar, stacked if not.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        legend
+                        filterBar
+                    }
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Imagery: Sentinel-2 cloudless 2016 by EOX, Copernicus Sentinel data; NASA Blue Marble")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .shadow(color: .black, radius: 2)
-                            .allowsHitTesting(false)
-                        // Side by side if there's room beside the radar, stacked if not.
-                        ViewThatFits(in: .horizontal) {
-                            HStack(spacing: 8) {
-                                legend
-                                filterBar
-                            }
-                            VStack(alignment: .leading, spacing: 6) {
-                                filterBar
-                                legend
-                            }
-                        }
-                        .padding(.trailing, 270)
-                    }
-                    .padding(12)
-                }
-                .overlay(alignment: .bottomTrailing) { RadarPanel(startExpanded: Snapshot.arguments.contains("--radar-open"), overheadOpen: Snapshot.arguments.contains("--overhead-open")).padding(12) }
-                .overlay { globeStatus }
-                .overlay(alignment: .topTrailing) {
-                    VStack(alignment: .trailing, spacing: 8) {
-                        if app.showSpectrum {
-                            SpectrumSlot(box: globeSize, feed: runner.spectrum, labels: signalLabels, lockedID: app.locked?.norad, onPick: tune) { app.showSpectrum = false }
-                        }
-                        searchResults
+                        filterBar
+                        legend
                     }
                 }
-                if let object = app.spaceObject { SpaceSceneOverlay(object: object).id(object.id) }
+                .padding(.trailing, 270)
             }
-                .onGeometryChange(for: CGSize.self) { $0.size } action: { globeSize.size = $0 }
+            .padding(12)
+        }
+        .overlay(alignment: .bottomTrailing) { RadarPanel(startExpanded: Snapshot.arguments.contains("--radar-open"), overheadOpen: Snapshot.arguments.contains("--overhead-open")).padding(12) }
+        .overlay { globeStatus }
+        .overlay(alignment: .topTrailing) {
+            VStack(alignment: .trailing, spacing: 8) {
+                if app.showSpectrum {
+                    SpectrumSlot(box: globeSize, feed: runner.spectrum, labels: signalLabels, lockedID: app.locked?.norad, onPick: tune) { app.showSpectrum = false }
+                }
+                searchResults
+            }
+        }
+        if let object = app.spaceObject { SpaceSceneOverlay(object: object).id(object.id) }
+    }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { globeSize.size = $0 }
+    }
+
+    /// The window: sidebar, globe, search and toolbar.
+    private var splitView: some View {
+        NavigationSplitView(columnVisibility: $sidebar) {
+            sidebarPanels
+        } detail: {
+            globeDetail
         }
         .overlay {
             if showStartup { StartupChecklist(isPresented: $showStartup).transition(.opacity) }
@@ -286,6 +320,11 @@ struct RootView: View {
             }
             ToolbarItem(placement: .primaryAction) { LockHistoryButton() }
         }
+    }
+
+    /// Start-up work, and keeping the radar, filters and receiver in step with the data.
+    private var withTasks: some View {
+        splitView
         .task {
             radar.start()
             radar.setStation(app.station)
@@ -335,6 +374,11 @@ struct RootView: View {
             store.setReceiverRanges(ranges)
             app.moveToReachableDownlink()
         }
+    }
+
+    /// The sheets, the bug button, and the sidebar stress check.
+    private var withSheets: some View {
+        withTasks
         .background(BugReportTitlebarButton { app.showBugReport = true }.frame(width: 0, height: 0))
         .sheet(isPresented: $app.showBugReport) {
             BugReportSheet().environmentObject(app)
@@ -364,24 +408,6 @@ struct RootView: View {
                 if k % 40 == 0 { FileHandle.standardError.write(Data(String(format: "stress %d worst stall %.2f s\n", k, worst).utf8)) }
             }
             FileHandle.standardError.write(Data(String(format: "stress done worst stall %.2f s\n", worst).utf8))
-        }
-        .onChange(of: app.locked?.norad) { _, _ in
-            tx.satelliteChanged(app.locked)
-            planner.update(satellite: app.locked, station: app.station)
-        }
-        // Switching mode is pointless with the panels hidden.
-        .onChange(of: app.panelMode) { _, _ in if sidebar == .detailOnly { withAnimation { sidebar = .all } } }
-        .onAppear {
-            Snapshot.livePlanner = planner
-            signalLabels.attach(store: store, app: app)
-            schedule.attach(store: store, app: app)
-            Snapshot.liveSchedule = schedule
-        }
-        .onChange(of: app.showSpectrum) { _, _ in signalLabels.refresh() }
-        .onChange(of: groups.shownNorads) { _, only in app.satelliteFilter.onlyNorads = only }
-        .onChange(of: app.station) { _, s in
-            radar.setStation(s)
-            planner.update(satellite: app.locked, station: s)
         }
     }
 
